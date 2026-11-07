@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Search | Answering Islam Archive</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="breadcrumb">
+    <a href="index.html">Home</a>
+    &nbsp;›&nbsp; Search
+  </nav>
+  <div class="search-page">
+    <h1>&#128269; Search Articles</h1>
+    <div class="search-wrap">
+      <input type="search" id="search-input" placeholder="Search 16.462 articles…" autofocus autocomplete="off">
+    </div>
+    <p id="search-status">Type at least 2 characters to search.</p>
+    <ul id="search-results"></ul>
+  </div>
+
+  <script>
+    let index = null;
+    let loading = false;
+
+    async function loadIndex() {
+      if (index !== null || loading) return;
+      loading = true;
+      document.getElementById('search-status').textContent = 'Loading search index…';
+      try {
+        const r = await fetch('search-index.json');
+        index = await r.json();
+        document.getElementById('search-status').textContent = 'Type at least 2 characters to search.';
+      } catch(e) {
+        document.getElementById('search-status').textContent = 'Could not load search index. Try refreshing.';
+      }
+      loading = false;
+    }
+
+    function esc(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function highlight(text, query) {
+      var lo = text.toLowerCase();
+      var q  = query.toLowerCase();
+      var i  = lo.indexOf(q);
+      if (i < 0) return esc(text);
+      return esc(text.slice(0, i)) +
+        '<mark class="result-highlight">' + esc(text.slice(i, i + query.length)) + '</mark>' +
+        esc(text.slice(i + query.length));
+    }
+
+    function formatPath(p) {
+      const parts = p.split('/');
+      parts.pop(); // remove filename
+      return parts.join(' › ') || 'Uncategorized';
+    }
+
+    function search(query) {
+      query = query.trim();
+      const status = document.getElementById('search-status');
+      const results = document.getElementById('search-results');
+      results.innerHTML = '';
+
+      if (query.length < 2) {
+        status.textContent = 'Type at least 2 characters to search.';
+        return;
+      }
+      if (!index) {
+        status.textContent = 'Loading…';
+        return;
+      }
+
+      const q = query.toLowerCase();
+      const matches = index.filter(item => item.t.toLowerCase().includes(q));
+
+      if (matches.length === 0) {
+        status.textContent = 'No results for "' + esc(query) + '"';
+        return;
+      }
+
+      status.textContent = matches.length.toLocaleString() + ' result' + (matches.length === 1 ? '' : 's') + ' for "' + esc(query) + '"';
+
+      const show = matches.slice(0, 50);
+      show.forEach(item => {
+        const li = document.createElement('li');
+        li.innerHTML = '<a href="' + item.p + '">' + highlight(item.t, query) + '</a>' +
+          '<div class="result-path">' + esc(formatPath(item.p)) + '</div>';
+        results.appendChild(li);
+      });
+
+      if (matches.length > 50) {
+        const li = document.createElement('li');
+        li.innerHTML = '<span style="color:var(--muted);font-family:sans-serif;font-size:14px">… and ' + (matches.length - 50).toLocaleString() + ' more results. Refine your search.</span>';
+        results.appendChild(li);
+      }
+    }
+
+    const input = document.getElementById('search-input');
+    input.addEventListener('focus', loadIndex);
+    input.addEventListener('input', () => {
+      if (!index) loadIndex();
+      search(input.value);
+    });
+  </script>
+</body>
+</html>
