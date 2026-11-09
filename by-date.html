@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Articles by Date | Answering Islam Archive</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .date-controls { display:flex; gap:12px; align-items:center; margin-bottom:24px; flex-wrap:wrap; }
+    .date-controls button { padding:8px 18px; border-radius:6px; border:1px solid var(--border,#ccc); background:var(--card-bg,#f5f5f5); color:var(--text,#222); cursor:pointer; font-size:14px; }
+    .date-controls button.active { background:var(--accent,#2563eb); color:#fff; border-color:var(--accent,#2563eb); }
+    .year-group { margin-bottom:32px; }
+    .year-heading { font-size:1.3rem; font-weight:700; border-bottom:2px solid var(--border,#e5e7eb); padding-bottom:6px; margin-bottom:12px; }
+    .date-list { list-style:none; padding:0; margin:0; }
+    .date-list li { padding:6px 0; border-bottom:1px solid var(--border,#f0f0f0); display:flex; gap:12px; align-items:baseline; }
+    .date-list li .art-date { color:var(--muted,#888); font-size:13px; white-space:nowrap; min-width:90px; }
+    #status { color:var(--muted,#888); font-style:italic; margin-bottom:16px; }
+  </style>
+</head>
+<body>
+  <nav class="breadcrumb"><a href="index.html">Home</a> › By Date</nav>
+  <div class="index-page">
+    <h1>Browse by Date</h1>
+    <div class="date-controls">
+      <button id="btn-newest" class="active" onclick="setOrder('newest')">Newest first</button>
+      <button id="btn-oldest" onclick="setOrder('oldest')">Oldest first</button>
+      <span id="status">Loading...</span>
+    </div>
+    <div id="content"></div>
+  </div>
+  <script>
+    var allPosts = [];
+    var currentOrder = "newest";
+
+    fetch("date-index.json")
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        allPosts = data;
+        document.getElementById("status").textContent = data.length + " articles";
+        render();
+      });
+
+    function setOrder(order) {
+      currentOrder = order;
+      document.getElementById("btn-newest").className = order === "newest" ? "active" : "";
+      document.getElementById("btn-oldest").className = order === "oldest" ? "active" : "";
+      render();
+    }
+
+    function render() {
+      var posts = allPosts.slice();
+      if (currentOrder === "oldest") posts.reverse();
+
+      var byYear = {};
+      var years = [];
+      posts.forEach(function(p) {
+        var y = p.d.slice(0, 4);
+        if (!byYear[y]) { byYear[y] = []; years.push(y); }
+        byYear[y].push(p);
+      });
+
+      var html = "";
+      years.forEach(function(y) {
+        html += "<div class=\"year-group\">";
+        html += "<div class=\"year-heading\">" + y + " <span style=\"font-weight:400;font-size:0.9rem;color:var(--muted,#888)\">("  + byYear[y].length + " articles)</span></div>";
+        html += "<ul class=\"date-list\">";
+        byYear[y].forEach(function(p) {
+          html += "<li><span class=\"art-date\">" + p.d + "</span><a href=\"search.html?q=" + encodeURIComponent(p.t) + "\">" + esc(p.t) + "</a></li>";
+        });
+        html += "</ul></div>";
+      });
+      document.getElementById("content").innerHTML = html;
+    }
+
+    function esc(s) {
+      return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+  </script>
+</body>
+</html>
